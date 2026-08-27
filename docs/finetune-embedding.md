@@ -19,19 +19,19 @@ flowchart TD
     P[PDF manuals] --> M[1 · MinerU extraction]
     M --> MD["manual.md (LaTeX math, HTML tables)<br/>+ images/ (screenshots)"]
     MD --> CI[2 · caption_images.py]
-    QV[qwen3-vl:8b<br/>frozen helper] -. describes each screenshot .-> CI
+    QV["qwen3-vl:8b<br/>frozen helper"] -. describes each screenshot .-> CI
     CI --> CM[manual.captioned.md]
     CM --> BP[3 · build_pairs.py]
-    QT[qwen2.5:7b<br/>frozen teacher] -. writes questions per chunk .-> BP
+    QT["qwen2.5:7b<br/>frozen teacher"] -. writes questions per chunk .-> BP
     BP --> TR[embedding_train.jsonl]
     BP --> VA[embedding_val.jsonl]
-    BGE[BAAI/bge-base-en-v1.5<br/><b>the model being trained</b>] --> ST[4 · soup train — task: embedding]
+    BGE[BAAI/bge-base-en-v1.5<br/><b>the model being trained</b>] --> ST["4 · soup train — task: embedding"]
     TR --> ST
     ST --> OUT[(./output_embedding<br/>tuned model)]
     OUT --> EV[5 · eval_embedder.py]
     VA --> EV
     BGE -. baseline comparison .-> EV
-    EV --> RES([recall@k: tuned vs base])
+    EV --> RES(["recall@k: tuned vs base"])
     OUT --> RAG[6 · your RAG stack]
 ```
 
