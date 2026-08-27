@@ -70,7 +70,7 @@ ollama run soup-qwen7b
 
 ## PDF → embedding model (for RAG)
 
-Turn a folder of PDFs (e.g. vendor documentation: Siemens Teamcenter, NX, Capital, Polarion, …) into a domain-tuned sentence-embedding model. Best used for retrieval (RAG): the tuned embedder finds the right manual chunks, and an LLM answers over them.
+Turn a folder of PDFs (e.g. enterprise software manuals or product documentation) into a domain-tuned sentence-embedding model. Best used for retrieval (RAG): the tuned embedder finds the right manual chunks, and an LLM answers over them.
 
 The stack (all local, fits 12 GB VRAM): **MinerU** for extraction → **Qwen3-VL** for screenshot captions → chunk → contrastive pairs → **BGE** fine-tune with Soup.
 
@@ -95,7 +95,7 @@ MinerU extracts UI screenshots as image files but doesn't describe them. Run a s
 ollama pull qwen3-vl:8b
 ```
 
-For each image MinerU extracted, ask it to *"describe this screenshot from Siemens software documentation: which application, which dialog/menu, which options are visible"*, and splice the description into the Markdown at the image reference. This makes screenshots searchable text. Run it as a separate pass so MinerU and the VLM don't contend for VRAM.
+For each image MinerU extracted, ask it to *"describe this screenshot from software documentation: which application, which dialog/menu, which options are visible"*, and splice the description into the Markdown at the image reference. This makes screenshots searchable text. Run it as a separate pass so MinerU and the VLM don't contend for VRAM.
 
 Math needs no extra step — MinerU already emits LaTeX, and embedding/LLM models understand LaTeX natively. Tip: for formula-dense chunks, also add a one-line plain-language gloss next to the equation — users query in words, not LaTeX.
 
@@ -104,7 +104,7 @@ Math needs no extra step — MinerU already emits LaTeX, and embedding/LLM model
 The embedding trainer wants anchor/positive JSONL (optionally with a negative):
 
 ```json
-{"anchor": "How do I create a revision rule in Teamcenter?", "positive": "<the doc chunk that answers it>"}
+{"anchor": "How do I create a revision rule?", "positive": "<the doc chunk that answers it>"}
 {"anchor": "query", "positive": "relevant chunk", "negative": "unrelated chunk"}
 ```
 
@@ -113,7 +113,7 @@ Two ways to produce them from the extracted chunks:
 - **Synthetic questions via a local LLM** (recommended): for each chunk, have a local Ollama model generate 1–3 questions that the chunk answers → each `(question, chunk)` becomes an `(anchor, positive)` pair. Soup's `soup data forge --docs <dir> --task sft --judge-provider ollama --judge-model <model>` automates Q&A synthesis (always pass `--judge-provider` — the offline default generates placeholder junk).
 - **Structure-based (no LLM)**: use each section heading as the anchor and the section body as the positive. Weaker but free.
 
-Add negatives by sampling chunks from a *different* document (e.g. an NX chunk as the negative for a Polarion anchor).
+Add negatives by sampling chunks from a *different* document (e.g. a chunk from one product's manual as the negative for another product's anchor).
 
 ### 4. Configure and train
 
@@ -131,7 +131,7 @@ The output is a Hugging Face model directory — no GGUF/Ollama step; load it in
 ```python
 from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("./output_embedding")
-vectors = model.encode(["How do I branch a design in NX?"])
+vectors = model.encode(["How do I create a new design revision?"])
 ```
 
 Point your vector store (Chroma, Qdrant, pgvector, …) at it and index the same chunks you extracted in step 1.
