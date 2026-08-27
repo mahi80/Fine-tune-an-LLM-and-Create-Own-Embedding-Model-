@@ -15,6 +15,33 @@ Two guides, sharing one environment setup:
 
 They're complementary: the embedding model retrieves the right doc chunks, the LLM answers over them.
 
+## How to run this repo
+
+**1. Get the code and set up the environment** (once, ~30 min mostly downloads):
+
+```bash
+git clone https://github.com/mahi80/Fine-tune-an-LLM-and-Create-Own-Embedding-Model-.git
+cd Fine-tune-an-LLM-and-Create-Own-Embedding-Model-
+py -3.12 -m venv .venv
+.venv\Scripts\activate
+pip install torch --index-url https://download.pytorch.org/whl/cu126
+git clone https://github.com/MakazhanAlpamys/Soup.git
+pip install -e "Soup[train]"
+soup doctor
+```
+
+(No Python 3.12? `winget install Python.Python.3.12` first. Full details in [Setup](#setup-windows-11-nvidia-gpu) below.)
+
+**2. Pick how you want to run it** — all three do the same pipelines:
+
+| Mode | Command | Best for |
+|---|---|---|
+| **Chatbot** (easiest) | `pip install langgraph` then `python agents/chat.py` | It checks your hardware, advises a model, installs what it can, and runs everything in the background — you just answer a few questions and drop PDFs in `pdfs/` |
+| **One command per pipeline** | `python scripts/run_embedding_pipeline.py --pdfs pdfs/` or `python scripts/run_llm_pipeline.py --data data/train.jsonl --name my-model` | Scripted/repeatable runs; finished stages auto-skip, `--from-step` resumes, `--dry-run` previews |
+| **Step by step** | Follow [finetune-embedding.md](docs/finetune-embedding.md) / [finetune-llm.md](docs/finetune-llm.md) | Understanding every stage, customizing |
+
+**3. When it finishes:** the tuned embedding model is in `./output_embedding` (load with `sentence-transformers`); the tuned LLM is in Ollama — `ollama run my-model`.
+
 ## Architecture
 
 How the two trained models work together at answer time (RAG):
