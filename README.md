@@ -57,11 +57,29 @@ Then pick your guide: **[LLM fine-tuning](docs/finetune-llm.md)** or **[embeddin
 | `configs/soup_qwen7b.yaml` | Qwen2.5-7B QLoRA SFT config |
 | `configs/quickstart_soup.yaml` | TinyLlama smoke-test config |
 | `configs/soup_embedding.yaml` | Embedding-model fine-tune config |
+| `scripts/caption_images.py` | Splice VLM descriptions of screenshots into extracted Markdown |
+| `scripts/build_pairs.py` | Chunk Markdown → anchor/positive/negative pairs (+ optional SFT rows) |
+| `scripts/eval_embedder.py` | Recall@k / MRR comparison: tuned embedder vs base |
 | `scripts/verify_adapter.py` | 4-bit + LoRA adapter generation sanity check |
 | `data/test_prompts.jsonl` | Prompts for inference sanity checks |
+| `tests/` | Unit tests for the pipeline scripts (network mocked) |
 | `Modelfile` | Ollama import file for the exported GGUF |
 
 Model weights, adapters, and GGUF files are git-ignored (multi-GB).
+
+## Development
+
+The pipeline scripts are stdlib-only (no pip installs to run them). Quality gates:
+
+```bash
+pip install -e ".[dev]"
+pytest            # unit tests — Ollama calls are mocked, no server needed
+ruff check scripts/ tests/
+pylint scripts/ tests/
+deptry .
+```
+
+Not used on purpose: `uvloop` (no async code, and it's Linux-only), OpenTelemetry (single-machine CLI scripts — stderr progress logging is the right size; add tracing only if these ever run as a service).
 
 ## License
 

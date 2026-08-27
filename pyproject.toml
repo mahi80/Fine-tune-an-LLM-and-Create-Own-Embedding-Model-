@@ -1,0 +1,42 @@
+[project]
+name = "llmfinetuning"
+version = "0.1.0"
+description = "Local LLM + embedding fine-tuning pipelines (Soup, MinerU, Ollama)"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+# The pipeline scripts (caption_images.py, build_pairs.py) are stdlib-only by design;
+# heavy tools (soup-cli, mineru, sentence-transformers) are installed per the guides.
+dependencies = []
+
+[project.optional-dependencies]
+eval = ["sentence-transformers>=3.0"]
+dev = ["pytest>=8.0", "ruff>=0.6", "pylint>=3.0", "deptry>=0.20"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.messages_control]
+# docstring/naming style is already enforced by ruff; keep pylint for logic checks
+disable = ["missing-function-docstring", "missing-class-docstring", "too-many-locals",
+           "too-many-branches", "too-many-statements", "duplicate-code"]
+
+[tool.deptry]
+# caption_images.py / build_pairs.py are stdlib-only CLIs. verify_adapter.py runs
+# inside the Soup training venv (torch/transformers/peft come from soup-cli[train]);
+# sentence-transformers is the declared 'eval' extra, lazily imported in eval_embedder.py.
+[tool.deptry.per_rule_ignores]
+DEP002 = ["pytest", "ruff", "pylint", "deptry"]
+DEP003 = ["torch", "transformers", "peft"]
+DEP004 = ["pytest", "sentence_transformers"]

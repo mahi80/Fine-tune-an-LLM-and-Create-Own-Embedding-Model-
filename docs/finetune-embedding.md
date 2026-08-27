@@ -1,60 +1,98 @@
 # Fine-tune an embedding model (PDF → RAG)
 
-Turn a folder of PDFs (e.g. enterprise software manuals or product documentation) into a domain-tuned sentence-embedding model. Best used for retrieval (RAG): the tuned embedder finds the right manual chunks, and an LLM answers over them. Complete the [environment setup](../README.md#setup-windows-11-nvidia-gpu) first.
+Turn a folder of PDFs (e.g. enterprise software manuals or product documentation) into a domain-tuned sentence-embedding model, and **measure** that it beats the base model. Best used for retrieval (RAG): the tuned embedder finds the right manual chunks, and an LLM answers over them. Complete the [environment setup](../README.md#setup-windows-11-nvidia-gpu) first.
 
-The stack (all local, fits 12 GB VRAM): **MinerU** for extraction → **Qwen3-VL** for screenshot captions → chunk → contrastive pairs → **BGE** fine-tune with Soup.
+The stack (all local, fits 12 GB VRAM):
 
-## 1. Extract the PDFs with MinerU
+```
+PDFs → MinerU (Markdown + LaTeX math + images)
+     → caption_images.py (VLM describes screenshots)
+     → build_pairs.py (chunk + generate anchor/positive/negative JSONL)
+     → soup train (BGE fine-tune)
+     → eval_embedder.py (tuned vs base recall)
+```
 
-[MinerU](https://github.com/opendatalab/MinerU) beats naive text extraction (pypdf) on everything that matters for technical docs: it outputs Markdown with **math as LaTeX**, **tables as HTML**, correct reading order, and it **extracts embedded images/screenshots to files** with their references linked in the Markdown. It OCRs scanned pages automatically. Native Windows, needs Python 3.10–3.12 (3.13 breaks), ~8 GB VRAM for the high-accuracy VLM backend:
+## 0. One-time prerequisites
 
 ```bash
 pip install "mineru[core]"
-mineru -p manual.pdf -o extracted/ -b vlm-transformers
+ollama pull qwen3-vl:8b     # vision model for screenshot captions (needs Ollama ≥ 0.12.7)
+ollama pull qwen2.5:7b      # text model for question generation
 ```
 
-(First run downloads the models. `-b pipeline` is the lighter classic backend — runs on ~4 GB VRAM or CPU.)
+## 1. Extract the PDFs with MinerU
+
+[MinerU](https://github.com/opendatalab/MinerU) beats naive text extraction (pypdf) on everything that matters for technical docs: Markdown output with **math as LaTeX**, **tables as HTML**, correct reading order, and **embedded images/screenshots extracted to files** with references linked in the Markdown. It OCRs scanned pages automatically. Native Windows, Python 3.10–3.12 (3.13 breaks), ~8 GB VRAM for the high-accuracy VLM backend:
+
+```bash
+mineru -p pdfs/ -o extracted/ -b vlm-transformers
+```
+
+(First run downloads the models. `-b pipeline` is the lighter classic backend — ~4 GB VRAM or CPU. Point `-p` at a single PDF or a folder.)
+
+Each PDF becomes a folder under `extracted/` containing a `.md` file and an `images/` directory.
 
 Fallbacks: `soup data ingest manual.pdf` (pypdf, text-only — fine for simple prose PDFs); [Docling](https://github.com/docling-project/docling) (IBM, MIT-licensed) if strict licensing matters — slightly weaker math fidelity.
 
-## 2. Caption screenshots with a local VLM
+## 2. Caption screenshots
 
-MinerU extracts UI screenshots as image files but doesn't describe them. Run a second pass with Qwen3-VL via Ollama (Apache-2.0, trained for GUI/screen understanding — needs Ollama ≥ 0.12.7):
-
-```bash
-ollama pull qwen3-vl:8b
-```
-
-For each image MinerU extracted, ask it to *"describe this screenshot from software documentation: which application, which dialog/menu, which options are visible"*, and splice the description into the Markdown at the image reference. This makes screenshots searchable text. Run it as a separate pass so MinerU and the VLM don't contend for VRAM.
-
-Math needs no extra step — MinerU already emits LaTeX, and embedding/LLM models understand LaTeX natively. Tip: for formula-dense chunks, also add a one-line plain-language gloss next to the equation — users query in words, not LaTeX.
-
-## 3. Build contrastive pairs
-
-The embedding trainer wants anchor/positive JSONL (optionally with a negative):
-
-```json
-{"anchor": "How do I create a revision rule?", "positive": "<the doc chunk that answers it>"}
-{"anchor": "query", "positive": "relevant chunk", "negative": "unrelated chunk"}
-```
-
-Two ways to produce them from the extracted chunks:
-
-- **Synthetic questions via a local LLM** (recommended): for each chunk, have a local Ollama model generate 1–3 questions that the chunk answers → each `(question, chunk)` becomes an `(anchor, positive)` pair. Soup's `soup data forge --docs <dir> --task sft --judge-provider ollama --judge-model <model>` automates Q&A synthesis (always pass `--judge-provider` — the offline default generates placeholder junk).
-- **Structure-based (no LLM)**: use each section heading as the anchor and the section body as the positive. Weaker but free.
-
-Add negatives by sampling chunks from a *different* document (e.g. a chunk from one product's manual as the negative for another product's anchor).
-
-## 4. Configure and train
+MinerU extracts UI screenshots as files but doesn't describe them. [`scripts/caption_images.py`](../scripts/caption_images.py) sends every referenced image to Qwen3-VL (Apache-2.0, trained for GUI/screen understanding) and splices the description into the Markdown right after the image reference — making screenshots searchable text. It also transcribes any formulas it sees as LaTeX:
 
 ```bash
-soup init --template embedding -o soup_embedding.yaml   # or use configs/soup_embedding.yaml
-soup train --config soup_embedding.yaml --yes
+python scripts/caption_images.py extracted/manual/auto/manual.md
 ```
 
-Key config (see [configs/soup_embedding.yaml](../configs/soup_embedding.yaml)): base `BAAI/bge-base-en-v1.5` (~110M params — trains fast at full precision on any GPU we'd use here), `task: embedding`, `format: embedding`, `embedding_loss: contrastive` (InfoNCE; also `triplet` with `embedding_margin`, or `cosine`), `embedding_pooling: mean`.
+Writes `manual.captioned.md` next to the input. Re-runnable: already-captioned images are skipped, so an interrupted run resumes where it stopped. Run it per extracted Markdown file (loop over them in a shell `for` loop for many PDFs).
 
-## 5. Use the tuned embedder
+Math in the *text* needs no extra step — MinerU already emits LaTeX, and embedding/LLM models understand LaTeX natively.
+
+## 3. Generate training pairs
+
+[`scripts/build_pairs.py`](../scripts/build_pairs.py) chunks the (captioned) Markdown by headings, then asks a local Ollama text model to write questions each chunk answers. Every `(question, chunk)` becomes an anchor/positive pair; negatives are sampled from *other* documents:
+
+```bash
+python scripts/build_pairs.py extracted/ --output-dir data/
+```
+
+Output:
+
+- `data/embedding_train.jsonl` — `{"anchor", "positive", "negative"}` rows
+- `data/embedding_val.jsonl` — held-out 10% for the evaluation in step 5
+
+Useful knobs: `--questions-per-chunk 3` (more data per chunk), `--max-chunk-chars` (default 3000 ≈ fits BGE's 512-token window), `--model` (any Ollama text model). It automatically prefers `.captioned.md` files over the raw ones.
+
+**Bonus for the [LLM guide](finetune-llm.md):** add `--sft` and it also writes `data/sft_train.jsonl` (alpaca format — the model answers each question from its chunk), giving you domain Q&A data for `task: sft` from the same pass.
+
+Rule of thumb: aim for **1,000+ pairs** before expecting a measurable win; a few hundred PDF pages with 2 questions/chunk usually gets there.
+
+## 4. Train with Soup
+
+[configs/soup_embedding.yaml](../configs/soup_embedding.yaml) already points at `./data/embedding_train.jsonl`:
+
+```bash
+soup train --config configs/soup_embedding.yaml --yes
+```
+
+Key settings: base `BAAI/bge-base-en-v1.5` (~110M params — minutes per epoch at full precision), `task: embedding`, `format: embedding`, `embedding_loss: contrastive` (InfoNCE; alternatives: `triplet` with `embedding_margin`, or `cosine`), `embedding_pooling: mean`. The adapter-merged model lands in `./output_embedding`.
+
+## 5. Evaluate: did fine-tuning actually help?
+
+Never ship an embedder unmeasured. [`scripts/eval_embedder.py`](../scripts/eval_embedder.py) retrieves each held-out question against all chunks and compares Recall@k / MRR for base vs tuned:
+
+```bash
+pip install sentence-transformers
+python scripts/eval_embedder.py data/embedding_val.jsonl --tuned ./output_embedding
+```
+
+```
+     model    recall@1    recall@5   recall@10         mrr
+      base       0.412       0.701       0.792       0.531
+     tuned       0.538       0.845       0.901       0.662   ← what you want to see
+```
+
+If tuned ≤ base: usually too few pairs (step 3 — generate more questions per chunk), or the val questions are near-duplicates of train (regenerate with a different `--seed`).
+
+## 6. Use the tuned embedder
 
 The output is a Hugging Face model directory — no GGUF/Ollama step; load it in your RAG stack:
 
@@ -64,6 +102,6 @@ model = SentenceTransformer("./output_embedding")
 vectors = model.encode(["How do I create a new design revision?"])
 ```
 
-Point your vector store (Chroma, Qdrant, pgvector, …) at it and index the same chunks you extracted in step 1.
+Point your vector store (Chroma, Qdrant, pgvector, …) at it and index the same chunks from step 3 (`build_pairs.py`'s chunking is deterministic — rerun it or reuse the positives).
 
 **If screenshot-centric queries still retrieve poorly** even with captions: consider late-interaction *visual* retrieval (ColPali-style — e.g. [ColModernVBERT](https://github.com/illuin-tech/modernvbert), 250M params, MIT), which embeds page images directly and skips extraction loss entirely — at the cost of replacing the text-vector design (needs a multi-vector-capable store like Qdrant ≥ 1.10). And if the answering LLM sits behind a reranker, prefer a local one (a BGE reranker; Soup can fine-tune `task: reranker`) over cloud rerank APIs when the docs are confidential.

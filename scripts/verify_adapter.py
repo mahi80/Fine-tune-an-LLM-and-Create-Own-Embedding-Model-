@@ -1,7 +1,7 @@
 """Sanity check: load Qwen2.5-7B in 4-bit + trained LoRA adapter, generate a reply."""
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 BASE = "Qwen/Qwen2.5-7B-Instruct"
 ADAPTER = r"C:\PROJECTS_MAHI\SOUP\output_qwen7b"
@@ -18,7 +18,8 @@ model.eval()
 
 for q in ["What is the capital of France?", "Write a haiku about soup."]:
     msgs = [{"role": "user", "content": q}]
-    enc = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt", return_dict=True)
+    enc = tok.apply_chat_template(msgs, add_generation_prompt=True,
+                                  return_tensors="pt", return_dict=True)
     ids = enc["input_ids"].to("cuda:0")
     with torch.no_grad():
         out = model.generate(ids, max_new_tokens=80, do_sample=False)

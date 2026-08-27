@@ -25,12 +25,20 @@ or chat format:
 {"messages": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}
 ```
 
-Validate before training:
+Three ways to get data:
+
+- **You already have Q&A examples** — convert them to one of the formats above.
+- **From PDFs/documentation**: run steps 1–3 of the [embedding guide](finetune-embedding.md) with the `--sft` flag on `build_pairs.py` — it writes `data/sft_train.jsonl` (alpaca format, model-generated Q&A grounded in your docs) alongside the embedding pairs.
+- **Public dataset** from Hugging Face (pass its hub id as `data.train`).
+
+Validate before training — format check plus chat-template compatibility:
 
 ```bash
-soup data validate ./data/train.jsonl
-soup data doctor ./data/train.jsonl --model Qwen/Qwen2.5-7B-Instruct
+soup data validate ./data/sft_train.jsonl
+soup data doctor ./data/sft_train.jsonl --model Qwen/Qwen2.5-7B-Instruct
 ```
+
+Rule of thumb: 1,000+ good examples for a noticeable domain effect; quality beats quantity.
 
 ## 3. QLoRA fine-tune
 
@@ -41,15 +49,26 @@ soup train  --config configs/soup_qwen7b.yaml --yes
 
 Measured: **7.3 GB peak VRAM** on the 12 GB card, LoRA adapter (r=16, alpha=32, 4-bit NF4 base) saved to `output_qwen7b/`.
 
-The config ([configs/soup_qwen7b.yaml](../configs/soup_qwen7b.yaml)) ships pointed at Soup's 20-example demo data — swap `data.train` for your dataset and raise `epochs` to 3 and `max_length` to 2048 for a real run. Sizing guide for other cards: 8 GB → ~7B QLoRA, 12 GB → 7–8B comfortable, 16 GB → ~14B.
+The config ([configs/soup_qwen7b.yaml](../configs/soup_qwen7b.yaml)) ships pointed at Soup's 20-example demo data — swap `data.train` for your dataset and raise `epochs` to 3 and `max_length` to 2048 for a real run. Interrupted? `soup train --config ... --resume`. Sizing guide for other cards: 8 GB → ~7B QLoRA, 12 GB → 7–8B comfortable, 16 GB → ~14B.
 
-## 4. Verify the adapter
+## 4. Evaluate the adapter
+
+Quick generation sanity check (loads base 4-bit + adapter, ~6 GB VRAM):
 
 ```bash
-python scripts/verify_adapter.py   # loads base 4-bit + adapter, generates test replies (~6 GB VRAM)
+python scripts/verify_adapter.py
 ```
 
 (Soup's own `soup infer` loads fp16 with no 4-bit option, so a 7B doesn't fit in 12 GB that way — hence this script.)
+
+Then evaluate properly:
+
+```bash
+soup eval auto --config configs/soup_qwen7b.yaml   # eval straight from the config
+soup chat --model ./output_qwen7b                  # interactive spot-check
+```
+
+Hold back ~10% of your SFT data (`data.val_split: 0.1` does it automatically) and watch the eval loss — if it rises while train loss falls, reduce epochs.
 
 ## 5. Export to GGUF + deploy to Ollama
 
@@ -63,3 +82,7 @@ ollama run soup-qwen7b
 ```
 
 The f16 GGUF (~14 GB for a 7B) can be deleted after `ollama create` — Ollama stores its own quantized copy (~4.7 GB).
+
+## Pairing with RAG
+
+For documentation-heavy use cases, the strongest setup combines both guides: this fine-tuned LLM answers over chunks retrieved by the [fine-tuned embedder](finetune-embedding.md) — the embedder guarantees the right manual text is in context, the SFT tuning teaches the answering style and domain vocabulary.
