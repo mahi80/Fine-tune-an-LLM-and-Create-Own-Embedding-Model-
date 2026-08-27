@@ -12,6 +12,19 @@ PDFs → MinerU (Markdown + LaTeX math + images)
      → eval_embedder.py (tuned vs base recall)
 ```
 
+### Which model does what
+
+Four models appear in this pipeline, but **only one is being trained** — the rest are frozen helpers:
+
+| Model | Role | Trained? |
+|---|---|---|
+| MinerU's internal models | Read the PDFs (layout, OCR, formulas) | No — extraction tool |
+| `qwen3-vl:8b` (Ollama) | Describe screenshots as text | No — helper |
+| `qwen2.5:7b` (Ollama) | Write the training questions ("teacher") | No — helper |
+| **`BAAI/bge-base-en-v1.5`** | **The embedding model — this is what gets fine-tuned** | **Yes** |
+
+The result in `./output_embedding` is a modified copy of BGE: same architecture and size, but its weights are adjusted (via LoRA, then merged) so that *your* domain's questions land close to the chunks that answer them in vector space. The helpers are never modified and aren't needed at serving time — in production you run only the tuned BGE.
+
 ## 0. One-time prerequisites
 
 ```bash
@@ -74,6 +87,16 @@ soup train --config configs/soup_embedding.yaml --yes
 ```
 
 Key settings: base `BAAI/bge-base-en-v1.5` (~110M params — minutes per epoch at full precision), `task: embedding`, `format: embedding`, `embedding_loss: contrastive` (InfoNCE; alternatives: `triplet` with `embedding_margin`, or `cosine`), `embedding_pooling: mean`. The adapter-merged model lands in `./output_embedding`.
+
+**Picking a different base model** — change `base:` in the config (and pass the same id as `--base` to `eval_embedder.py` in step 5 so the comparison stays fair):
+
+| Base | When to pick it |
+|---|---|
+| `BAAI/bge-base-en-v1.5` (default) | English docs, fastest to train, smallest to serve |
+| `BAAI/bge-large-en-v1.5` | Same family, ~3× bigger — a few recall points better, still trains in well under an hour |
+| `BAAI/bge-m3` | Multilingual docs and/or long chunks (8k-token window vs 512) |
+
+Whatever you pick, that exact model is the one being fine-tuned — the questions/captions helpers above stay the same.
 
 ## 5. Evaluate: did fine-tuning actually help?
 

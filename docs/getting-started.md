@@ -91,6 +91,8 @@ Data format for A2 — one line per example in a text file saved as `train.jsonl
 
 Rough total time for **one 300-page manual with ~150 screenshots**: **2–4 hours**, almost all unattended.
 
+Good to know: several AI models help along the way (reading PDFs, describing screenshots, writing practice questions), but they are all frozen tools — **the only model that actually gets trained is the small search model (`BAAI/bge-base-en-v1.5`) in step B4**, and the trained copy lands in `./output_embedding`. (Likewise in Path A, the model being trained is Qwen2.5-7B-Instruct.)
+
 **B0. One-time extras:**
 
 ```bash

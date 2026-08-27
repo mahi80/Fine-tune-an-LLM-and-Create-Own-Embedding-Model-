@@ -2,6 +2,8 @@
 
 Fine-tune a chat LLM on your own instruction data and deploy it locally. Reference run: **Qwen2.5-7B-Instruct** on an RTX 4080 Laptop (12 GB VRAM), Windows 11. Complete the [environment setup](../README.md#setup-windows-11-nvidia-gpu) first.
 
+**Which model gets trained:** `Qwen/Qwen2.5-7B-Instruct` (set as `base:` in the config) is the one being fine-tuned — QLoRA trains a small adapter (~30M parameters) on top of the frozen 4-bit base, and export merges them into one deployable model. Everything else is a helper: TinyLlama in step 1 is only a pipeline smoke test, and any Ollama model used to generate training data is a frozen "teacher", never modified. To fine-tune a different LLM, change `base:` (e.g. `mistralai/Mistral-7B-Instruct-v0.3`; ~7–8B fits 12 GB, ~14B is the stretch via Soup's layer streaming).
+
 ## 1. Smoke test (TinyLlama, ~1 min)
 
 Verifies the whole stack — download → train → save — before committing to a big model:
