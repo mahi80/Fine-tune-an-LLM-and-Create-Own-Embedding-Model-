@@ -1,0 +1,1 @@
+FROM ./output_qwen7b.f16.gguf

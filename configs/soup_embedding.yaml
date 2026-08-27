@@ -1,0 +1,27 @@
+# Embedding model fine-tune (for RAG over PDF documentation)
+# Data: anchor/positive(/negative) JSONL — see README "PDF → embedding model".
+# Based on Soup's `soup init --template embedding`.
+base: BAAI/bge-base-en-v1.5
+task: embedding
+
+data:
+  train: ./data/embedding_train.jsonl
+  format: embedding
+  val_split: 0.1
+  max_length: 512
+
+training:
+  epochs: 3
+  lr: 2e-5
+  batch_size: 16         # fixed — `auto` probe is unreliable on Windows/WDDM
+  gradient_accumulation_steps: 4
+  lora:
+    r: 64
+    alpha: 16
+    target_modules: auto
+  quantization: none     # 110M params — full precision fits easily
+  embedding_loss: contrastive
+  embedding_margin: 0.5
+  embedding_pooling: mean
+
+output: ./output_embedding

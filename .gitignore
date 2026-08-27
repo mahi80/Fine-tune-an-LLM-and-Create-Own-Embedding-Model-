@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Model artifacts — too large for git
+*.gguf
+*.safetensors
+*.bin
+output*/
+quickstart_output/
+
+# HF cache
+.cache/
