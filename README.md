@@ -40,7 +40,7 @@ soup doctor
 | **One command per pipeline** | `python scripts/run_embedding_pipeline.py --pdfs pdfs/` or `python scripts/run_llm_pipeline.py --data data/train.jsonl --name my-model` | Scripted/repeatable runs; finished stages auto-skip, `--from-step` resumes, `--dry-run` previews |
 | **Step by step** | Follow [finetune-embedding.md](docs/finetune-embedding.md) / [finetune-llm.md](docs/finetune-llm.md) | Understanding every stage, customizing |
 
-**3. When it finishes:** the tuned embedding model is in `./output_embedding` (load with `sentence-transformers`); the tuned LLM is in Ollama — `ollama run my-model`.
+**3. When it finishes:** the tuned embedding model is in `./output_embedding` (load with `sentence-transformers`); the tuned LLM is in Ollama — `ollama run my-model`. To take either model to a server or the cloud, see the [production deployment guide](docs/deployment.md).
 
 ## Architecture
 
@@ -129,6 +129,7 @@ Then pick your guide: **[LLM fine-tuning](docs/finetune-llm.md)** or **[embeddin
 | Path | What |
 |---|---|
 | `docs/agents.md` | Chatbot + LangGraph agents guide (zero-command mode) |
+| `docs/deployment.md` | Production deployment: standalone use, AWS/Azure/GCP GPU sizing, Kubernetes |
 | `docs/finetune-llm.md` | LLM fine-tuning guide (QLoRA SFT → GGUF → Ollama) |
 | `docs/finetune-embedding.md` | Embedding fine-tuning guide (PDF → RAG) |
 | `configs/soup_qwen7b.yaml` | Qwen2.5-7B QLoRA SFT config |

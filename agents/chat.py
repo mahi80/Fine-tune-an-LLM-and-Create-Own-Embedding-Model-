@@ -36,16 +36,20 @@ def ask(text: str) -> str:
 
 
 def choose_pipeline() -> str:
-    say("Hi! I can build two things for you, fully locally:")
+    say("Hi! I can build these for you, fully locally:")
     say("  1. smart search over your PDF manuals (embedding model + RAG)")
     say("  2. your own chat model (LLM fine-tune)")
+    say("  3. both — the search model first, then a chat model trained on Q&A "
+        "generated from the same PDFs")
     while True:
-        choice = ask("Which one? [1/2, Enter = 1]")
+        choice = ask("Which one? [1/2/3, Enter = 1]")
         if choice in ("", "1"):
             return "embedding"
         if choice == "2":
             return "llm"
-        say("Please answer 1 or 2.")
+        if choice == "3":
+            return "both"
+        say("Please answer 1, 2 or 3.")
 
 
 def collect_pdfs() -> str:
@@ -251,33 +255,64 @@ def gpu_selfcare() -> None:
 
 
 
+def run_embedding_flow(force_sft: bool = False) -> int:
+    pdfs = collect_pdfs()
+    if force_sft:
+        say("I will also generate chat-model training data from these PDFs "
+            "for the second stage.")
+        want_sft = True
+    else:
+        want_sft = ask("Also produce chat-model training data from these PDFs? "
+                       "[y/N]").lower() in ("y", "yes")
+    ns = default_args("embedding", pdfs=pdfs, sft=want_sft)
+    hw = graph_common.probe_hardware()
+    if not preflight("embedding"):
+        return 1
+    gpu_selfcare()
+    base = choose_model("embedding", hw)
+    ns.config = write_session_config("embedding", base, None)
+    explain_steps("embedding", ns)
+    if ask("Ready to start? [Y/n]").lower() not in ("", "y", "yes"):
+        say("Okay — run me again whenever you're ready.")
+        return 2
+    return run_in_background("embedding", ns)
+
+
+def run_llm_flow(data_default: str | None = None) -> int:
+    if data_default and Path(data_default).is_file():
+        say(f"Using the training data we just generated: {data_default}")
+        data = data_default
+    else:
+        data = collect_llm_data()
+    name = ask("What should the finished model be called in Ollama? "
+               "[Enter = my-model]") or "my-model"
+    ns = default_args("llm", data=data, name=name)
+    hw = graph_common.probe_hardware()
+    if not preflight("llm"):
+        return 1
+    gpu_selfcare()
+    base = choose_model("llm", hw)
+    ns.config = write_session_config("llm", base, data)
+    explain_steps("llm", ns)
+    if ask("Ready to start? [Y/n]").lower() not in ("", "y", "yes"):
+        say("Okay — run me again whenever you're ready.")
+        return 2
+    return run_in_background("llm", ns)
+
+
 def main() -> int:
     pipeline = choose_pipeline()
     if pipeline == "embedding":
-        pdfs = collect_pdfs()
-        want_sft = ask("Also produce chat-model training data from these PDFs? "
-                       "[y/N]").lower() in ("y", "yes")
-        ns = default_args("embedding", pdfs=pdfs, sft=want_sft)
-    else:
-        data = collect_llm_data()
-        name = ask("What should the finished model be called in Ollama? "
-                   "[Enter = my-model]") or "my-model"
-        ns = default_args("llm", data=data, name=name)
-
-    if not preflight(pipeline):
-        return 1
-    gpu_selfcare()
-
-    hw = graph_common.probe_hardware()
-    base = choose_model(pipeline, hw)
-    ns.config = write_session_config(
-        pipeline, base, ns.data if pipeline == "llm" else None)
-
-    explain_steps(pipeline, ns)
-    if ask("Ready to start? [Y/n]").lower() not in ("", "y", "yes"):
-        say("Okay — run me again whenever you're ready.")
-        return 0
-    return run_in_background(pipeline, ns)
+        return run_embedding_flow()
+    if pipeline == "llm":
+        return run_llm_flow()
+    # both: embedding (with SFT data generation) first, then the LLM on that data
+    result = run_embedding_flow(force_sft=True)
+    if result != 0:
+        return result
+    say("Stage 1 done — your search model is ready. Now let's fine-tune the "
+        "chat model on the Q&A data generated from your PDFs.")
+    return run_llm_flow(data_default="data/sft_train.jsonl")
 
 
 if __name__ == "__main__":

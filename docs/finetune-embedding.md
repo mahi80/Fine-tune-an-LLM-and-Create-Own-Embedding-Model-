@@ -163,3 +163,5 @@ vectors = model.encode(["How do I create a new design revision?"])
 Point your vector store (Chroma, Qdrant, pgvector, …) at it and index the same chunks from step 3 (`build_pairs.py`'s chunking is deterministic — rerun it or reuse the positives).
 
 **If screenshot-centric queries still retrieve poorly** even with captions: consider late-interaction *visual* retrieval (ColPali-style — e.g. [ColModernVBERT](https://github.com/illuin-tech/modernvbert), 250M params, MIT), which embeds page images directly and skips extraction loss entirely — at the cost of replacing the text-vector design (needs a multi-vector-capable store like Qdrant ≥ 1.10). And if the answering LLM sits behind a reranker, prefer a local one (a BGE reranker; Soup can fine-tune `task: reranker`) over cloud rerank APIs when the docs are confidential.
+
+Taking it to production (standalone use, cloud GPUs, Kubernetes): see the [deployment guide](deployment.md).

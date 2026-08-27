@@ -115,3 +115,5 @@ The f16 GGUF (~14 GB for a 7B) can be deleted after `ollama create` — Ollama s
 ## Pairing with RAG
 
 For documentation-heavy use cases, the strongest setup combines both guides: this fine-tuned LLM answers over chunks retrieved by the [fine-tuned embedder](finetune-embedding.md) — the embedder guarantees the right manual text is in context, the SFT tuning teaches the answering style and domain vocabulary.
+
+Taking it to production (standalone use, cloud GPUs, Kubernetes): see the [deployment guide](deployment.md).
