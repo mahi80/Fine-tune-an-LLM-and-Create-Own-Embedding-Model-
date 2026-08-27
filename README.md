@@ -2,6 +2,8 @@
 
 Local fine-tuning pipelines running entirely on a consumer laptop GPU (RTX 4080 Laptop, 12 GB VRAM, Windows 11), built with [Soup](https://github.com/MakazhanAlpamys/Soup) (`soup-cli`, Apache-2.0), a CLI-first fine-tuning tool. The files in this repo (configs, scripts, docs) are MIT-licensed.
 
+**New to all of this? Start with the [step-by-step beginner walkthrough](docs/getting-started.md)** — hardware requirements, copy-paste commands, and runtime estimates for every stage.
+
 Two guides, sharing one environment setup:
 
 | Guide | What you get |
@@ -10,12 +12,6 @@ Two guides, sharing one environment setup:
 | **[Fine-tune an embedding model](docs/finetune-embedding.md)** | A domain-tuned retriever for RAG from a folder of PDFs: MinerU extraction → VLM screenshot captions → contrastive pairs → BGE |
 
 They're complementary: the embedding model retrieves the right doc chunks, the LLM answers over them.
-
-## ⚠️ Security note
-
-This project originally started from `github.com/jochi2018/Soup`, which turned out to be a **malicious clone** of the real Soup repository. That fork adds a `src/3.0.zip` containing a Windows malware dropper (`Application.cmd` → `util.exe` + obfuscated Lua payload disguised as `cert.txt`) and replaces the README with a fake "Download Soup" download badge, while deleting the CI workflows to keep the tampering quiet. The Python source itself was unmodified from upstream.
-
-**Use the real upstream instead: <https://github.com/MakazhanAlpamys/Soup>** — and in general, never run a "release zip" from a repo whose project is installed via `pip`.
 
 ## Setup (Windows 11, NVIDIA GPU)
 
@@ -35,6 +31,8 @@ pip install -e "Soup[train]"
 
 soup doctor   # everything must be green
 ```
+
+> Note: install Soup only from the upstream URL above — at least one malicious clone of it has circulated on GitHub offering a malware "download zip". A pip-installed project never needs a release zip.
 
 Versions that worked: `soup-cli 0.73.3`, `torch 2.13.0+cu126`, `transformers 5.16.1`, `trl 0.29.1`, `peft 0.20.0`, `bitsandbytes 0.50.2`.
 
