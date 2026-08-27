@@ -4,6 +4,23 @@ Fine-tune a chat LLM on your own instruction data and deploy it locally. Referen
 
 **Which model gets trained:** `Qwen/Qwen2.5-7B-Instruct` (set as `base:` in the config) is the one being fine-tuned — QLoRA trains a small adapter (~30M parameters) on top of the frozen 4-bit base, and export merges them into one deployable model. Everything else is a helper: TinyLlama in step 1 is only a pipeline smoke test, and any Ollama model used to generate training data is a frozen "teacher", never modified. To fine-tune a different LLM, change `base:` (e.g. `mistralai/Mistral-7B-Instruct-v0.3`; ~7–8B fits 12 GB, ~14B is the stretch via Soup's layer streaming).
 
+## Architecture
+
+```mermaid
+flowchart TD
+    D["train.jsonl<br/>(your instruction data, or build_pairs.py --sft output)"] --> T
+    B[Qwen2.5-7B-Instruct<br/>frozen base, 4-bit NF4] --> T[3 · soup train — QLoRA]
+    T --> AD["LoRA adapter (~30M trainable params)<br/>./output_qwen7b — 7.3 GB peak VRAM"]
+    AD --> V[4 · verify_adapter.py / soup eval / soup chat]
+    AD --> X[5 · soup export — merge adapter + convert]
+    B -. merged into .-> X
+    X --> G[output_qwen7b.f16.gguf ~14 GB]
+    G --> O["ollama create -q q4_K_M (~4.7 GB)"]
+    O --> R([ollama run soup-qwen7b])
+```
+
+QLoRA in one sentence: the 7B base stays frozen in 4-bit precision (cheap to hold), only a small adapter learns your data, and export folds the adapter back into the base to produce one deployable model.
+
 ## 1. Smoke test (TinyLlama, ~1 min)
 
 Verifies the whole stack — download → train → save — before committing to a big model:

@@ -13,6 +13,28 @@ Two guides, sharing one environment setup:
 
 They're complementary: the embedding model retrieves the right doc chunks, the LLM answers over them.
 
+## Architecture
+
+How the two trained models work together at answer time (RAG):
+
+```mermaid
+flowchart LR
+    Q([User question]) --> EMB
+    subgraph Retrieval
+        EMB[Tuned embedding model<br/>./output_embedding]
+        EMB -->|query vector| VS[(Vector store<br/>Qdrant / Chroma / pgvector)]
+        VS -->|top-k chunks| CH[Relevant manual chunks]
+    end
+    subgraph Generation
+        LLM[Tuned LLM<br/>ollama run soup-qwen7b]
+    end
+    CH --> LLM
+    Q --> LLM
+    LLM --> A([Grounded answer])
+```
+
+The embedding model guarantees the right manual text is in context; the LLM turns it into an answer in your domain's voice. Each guide below has its own training-architecture diagram.
+
 ## What hardware do you need?
 
 | GPU | What works |
