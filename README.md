@@ -1,4 +1,4 @@
-# LLMFinetuning
+# Fine-tune an LLM & Create Your Own Embedding Model
 
 Local fine-tuning pipelines running entirely on a consumer laptop GPU (RTX 4080 Laptop, 12 GB VRAM, Windows 11), built with [Soup](https://github.com/MakazhanAlpamys/Soup) (`soup-cli`, Apache-2.0), a CLI-first fine-tuning tool. The files in this repo (configs, scripts, docs) are MIT-licensed.
 
