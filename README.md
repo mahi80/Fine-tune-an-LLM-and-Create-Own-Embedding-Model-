@@ -13,6 +13,33 @@ Two guides, sharing one environment setup:
 
 They're complementary: the embedding model retrieves the right doc chunks, the LLM answers over them.
 
+## What hardware do you need?
+
+| GPU | What works |
+|---|---|
+| **12 GB+ NVIDIA** (RTX 3060 12GB, 4070, 4080 laptop) | Everything, comfortably |
+| **8 GB NVIDIA** (3060 Ti, 4060) | Everything with the shipped small-batch settings — the 7B QLoRA run peaks at 7.3 GB, so close other GPU apps |
+| **4–6 GB NVIDIA** | Embedding pipeline works (use MinerU `-b pipeline`); for the LLM use a small model or Soup's layer-streaming (8B has been trained on a 4 GB card, ~1.4× slower) |
+| **No NVIDIA** | PDF extraction runs on CPU; training realistically needs a GPU — consider a cloud rental for those steps |
+
+Plus 16–32 GB RAM and 60–150 GB free disk (one-time model downloads are 15–40 GB).
+
+## Time & capacity at a glance
+
+Rough figures on a 12 GB card; first runs are slower (model downloads). Run GPU stages one at a time.
+
+| Stage | Pipeline | GPU memory | Speed |
+|---|---|---|---|
+| PDF extraction (MinerU) | embedding | ~8 GB (or ~4 GB / CPU with `-b pipeline`) | ~500–1,500 pages/hour |
+| Screenshot captioning (qwen3-vl:8b) | embedding | ~6 GB | 5–15 s per image |
+| Pair / Q&A generation (qwen2.5:7b) | both | ~5 GB | 5–15 s per chunk |
+| Embedding training (BGE-base) | embedding | ~2–4 GB | 10–30 min |
+| Embedding eval (tuned vs base) | embedding | ~2 GB | minutes |
+| LLM QLoRA training (Qwen2.5-7B) | LLM | 7.3 GB measured | ~1–2 h per 1,000 examples × 3 epochs |
+| GGUF export + Ollama import | LLM | CPU/RAM mostly | 20–30 min |
+
+**How many PDFs per run?** No hard limit — MinerU processes a folder sequentially; the constraints are time and disk (extracted output ≈ the PDFs' own size). Validate the whole pipeline on **one PDF first**, then batch — 50 manuals is an overnight run. One 300-page manual through the full embedding path ≈ **2–4 hours**, almost all unattended; the LLM path is ~2–4 hours on top once you have data.
+
 ## Setup (Windows 11, NVIDIA GPU)
 
 Soup requires Python >=3.10,<3.13.
