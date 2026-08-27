@@ -12,7 +12,17 @@ PDFs → MinerU (Markdown + LaTeX math + images)
      → eval_embedder.py (tuned vs base recall)
 ```
 
-### Architecture
+### One command (or zero)
+
+Every step below runs in order via one script — finished stages auto-skip, `--from-step X` resumes, `--dry-run` previews:
+
+```bash
+python scripts/run_embedding_pipeline.py --pdfs pdfs/   # or: python agents/chat.py
+```
+
+Zero-command mode: the [chatbot + agents](agents.md) guide you through the same pipeline conversationally with human-in-the-loop checkpoints.
+
+## Architecture
 
 ```mermaid
 flowchart TD

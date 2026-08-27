@@ -2,7 +2,9 @@
 
 Local fine-tuning pipelines running entirely on a consumer laptop GPU (RTX 4080 Laptop, 12 GB VRAM, Windows 11), built with [Soup](https://github.com/MakazhanAlpamys/Soup) (`soup-cli`, Apache-2.0), a CLI-first fine-tuning tool. The files in this repo (configs, scripts, docs) are MIT-licensed.
 
-**New to all of this? Start with the [step-by-step beginner walkthrough](docs/getting-started.md)** — hardware requirements, copy-paste commands, and runtime estimates for every stage.
+**Easiest start: the chatbot.** `pip install langgraph`, then `python agents/chat.py` — it checks your hardware, advises which model fits, installs what it can, explains every step, and runs the whole pipeline in the background with a few approve/reject checkpoints. See the [agents guide](docs/agents.md).
+
+Prefer doing it yourself? The [step-by-step beginner walkthrough](docs/getting-started.md) has hardware requirements, copy-paste commands, and runtime estimates for every stage.
 
 Two guides, sharing one environment setup:
 
@@ -99,11 +101,17 @@ Then pick your guide: **[LLM fine-tuning](docs/finetune-llm.md)** or **[embeddin
 
 | Path | What |
 |---|---|
+| `docs/agents.md` | Chatbot + LangGraph agents guide (zero-command mode) |
 | `docs/finetune-llm.md` | LLM fine-tuning guide (QLoRA SFT → GGUF → Ollama) |
 | `docs/finetune-embedding.md` | Embedding fine-tuning guide (PDF → RAG) |
 | `configs/soup_qwen7b.yaml` | Qwen2.5-7B QLoRA SFT config |
 | `configs/quickstart_soup.yaml` | TinyLlama smoke-test config |
 | `configs/soup_embedding.yaml` | Embedding-model fine-tune config |
+| `agents/chat.py` | Guided chatbot — runs either pipeline in the background |
+| `agents/pipeline_agents.py` | LangGraph orchestrator: planner + sequential step agents |
+| `agents/run_agents.py` | Agent runner CLI (`embedding` / `llm`, `--auto`, `--auto-install`) |
+| `scripts/run_embedding_pipeline.py` | One-command embedding pipeline (extract → … → eval) |
+| `scripts/run_llm_pipeline.py` | One-command LLM pipeline (validate → … → Ollama) |
 | `scripts/caption_images.py` | Splice VLM descriptions of screenshots into extracted Markdown |
 | `scripts/build_pairs.py` | Chunk Markdown → anchor/positive/negative pairs (+ optional SFT rows) |
 | `scripts/eval_embedder.py` | Recall@k / MRR comparison: tuned embedder vs base |
@@ -121,8 +129,8 @@ The pipeline scripts are stdlib-only (no pip installs to run them). Quality gate
 ```bash
 pip install -e ".[dev]"
 pytest            # unit tests — Ollama calls are mocked, no server needed
-ruff check scripts/ tests/
-pylint scripts/ tests/
+ruff check scripts/ tests/ agents/
+pylint scripts/ tests/ agents/
 deptry .
 ```
 
