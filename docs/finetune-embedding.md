@@ -164,4 +164,6 @@ Point your vector store (Chroma, Qdrant, pgvector, …) at it and index the same
 
 **If screenshot-centric queries still retrieve poorly** even with captions: consider late-interaction *visual* retrieval (ColPali-style — e.g. [ColModernVBERT](https://github.com/illuin-tech/modernvbert), 250M params, MIT), which embeds page images directly and skips extraction loss entirely — at the cost of replacing the text-vector design (needs a multi-vector-capable store like Qdrant ≥ 1.10). And if the answering LLM sits behind a reranker, prefer a local one (a BGE reranker; Soup can fine-tune `task: reranker`) over cloud rerank APIs when the docs are confidential.
 
-Taking it to production (standalone use, cloud GPUs, Kubernetes): see the [deployment guide](deployment.md).
+**Production note:** Soup's output here is a LoRA adapter dir — merge it into a standalone, TEI-ready model with `python scripts/merge_embedding_adapter.py ./output_embedding` before serving. Details in the [deployment guide](deployment.md).
+
+**Beyond fine-tuning:** for Cohere-style quality on a large corpus — full-parameter large-batch training, hard negatives, and a reranker — continue with [embedding-from-scratch.md](embedding-from-scratch.md).

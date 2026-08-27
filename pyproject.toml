@@ -11,6 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 eval = ["sentence-transformers>=3.0"]
+embed = ["sentence-transformers>=3.0", "pypdf>=4.0"]
 agents = ["langgraph>=0.2"]
 dev = ["pytest>=8.0", "ruff>=0.6", "pylint>=3.0", "deptry>=0.20"]
 
@@ -43,8 +44,11 @@ disable = ["missing-function-docstring", "missing-class-docstring", "too-many-lo
 # sentence-transformers is the declared 'eval' extra, lazily imported in eval_embedder.py.
 known_first_party = ["_pipeline", "caption_images", "build_pairs", "eval_embedder",
   "verify_adapter", "run_embedding_pipeline", "run_llm_pipeline",
+  "bulk_extract", "build_weak_pairs", "train_embedder", "mine_hard_negatives",
+  "train_reranker", "merge_embedding_adapter",
   "graph_common", "pipeline_agents", "run_agents", "chat"]
 [tool.deptry.per_rule_ignores]
 DEP002 = ["pytest", "ruff", "pylint", "deptry"]
-DEP003 = ["torch", "transformers", "peft", "psutil", "langgraph"]
+DEP003 = ["torch", "transformers", "peft", "psutil", "langgraph", "datasets",
+  "pypdf", "sentence_transformers"]
 DEP004 = ["pytest", "sentence_transformers", "langgraph"]

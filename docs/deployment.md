@@ -13,6 +13,8 @@ Move them like any files: copy the folder, `aws s3 cp` / `az storage blob upload
 
 The tuned embedder is useful entirely on its own — any RAG stack, search service, or app can use it without the LLM.
 
+> Which artifact do you have? Soup's fine-tune output (`./output_embedding`) is a **LoRA adapter dir** — run `python scripts/merge_embedding_adapter.py ./output_embedding` once to get a standalone, TEI-ready model. The from-scratch trainer (`train_embedder.py`) already outputs the full model. The examples below assume the standalone form.
+
 **Option A — inside your app (simplest):**
 
 ```python
@@ -30,7 +32,7 @@ docker run -p 8080:80 -v ./output_embedding:/model \
   ghcr.io/huggingface/text-embeddings-inference:cpu-latest --model-id /model
 ```
 
-(GPU images exist for high throughput; [Infinity](https://github.com/michaelfeil/infinity) (MIT) is a good alternative.) Your applications then call it over HTTP exactly like the OpenAI embeddings API — no Python dependency in the caller.
+(GPU images exist for high throughput; [Infinity](https://github.com/michaelfeil/infinity) (MIT) is a good alternative.) Your applications then call it over HTTP exactly like the OpenAI embeddings API — no Python dependency in the caller. TEI also serves **cross-encoder rerankers** (the `output_reranker` from train_reranker.py) via its `/rerank` endpoint — same container, second deployment.
 
 **Hardware for embedding serving:** CPU-only handles ~hundreds of queries/sec for bge-base; one small GPU (T4/L4) takes you to thousands and speeds up bulk indexing ~10×. This is the cheapest component in the stack — don't over-provision it.
 

@@ -175,7 +175,8 @@ def main() -> int:
             print(f"  {idx + 1}/{len(chunks)} chunks, {len(pairs)} pairs so far")
 
     rng.shuffle(pairs)
-    n_val = max(1, int(len(pairs) * args.val_split)) if len(pairs) > 1 else 0
+    n_val = (max(1, int(len(pairs) * args.val_split))
+             if args.val_split > 0 and len(pairs) > 1 else 0)
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
 

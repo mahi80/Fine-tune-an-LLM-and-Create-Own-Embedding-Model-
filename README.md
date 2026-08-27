@@ -15,6 +15,8 @@ Two guides, sharing one environment setup:
 
 They're complementary: the embedding model retrieves the right doc chunks, the LLM answers over them.
 
+**Chasing Cohere-class retrieval quality on your own corpus?** The [embedding-from-scratch guide](docs/embedding-from-scratch.md) goes beyond fine-tuning: routed corpus-scale extraction, structure-mined pairs, full-parameter large-batch contrastive training, hard-negative mining, and a cross-encoder reranker.
+
 ## How to run this repo
 
 **1. Get the code and set up the environment** (once, ~30 min mostly downloads):
@@ -130,6 +132,7 @@ Then pick your guide: **[LLM fine-tuning](docs/finetune-llm.md)** or **[embeddin
 |---|---|
 | `docs/agents.md` | Chatbot + LangGraph agents guide (zero-command mode) |
 | `docs/deployment.md` | Production deployment: standalone use, AWS/Azure/GCP GPU sizing, Kubernetes |
+| `docs/embedding-from-scratch.md` | Cohere-style stack: routed extraction, full-parameter training, reranker |
 | `docs/finetune-llm.md` | LLM fine-tuning guide (QLoRA SFT → GGUF → Ollama) |
 | `docs/finetune-embedding.md` | Embedding fine-tuning guide (PDF → RAG) |
 | `configs/soup_qwen7b.yaml` | Qwen2.5-7B QLoRA SFT config |
@@ -139,6 +142,12 @@ Then pick your guide: **[LLM fine-tuning](docs/finetune-llm.md)** or **[embeddin
 | `agents/pipeline_agents.py` | LangGraph orchestrator: planner + sequential step agents |
 | `agents/run_agents.py` | Agent runner CLI (`embedding` / `llm`, `--auto`, `--auto-install`) |
 | `scripts/run_embedding_pipeline.py` | One-command embedding pipeline (extract → … → eval) |
+| `scripts/bulk_extract.py` | Corpus-scale routed extraction (fast/OCR/complex/recovery paths) |
+| `scripts/build_weak_pairs.py` | Structure-mined pairs at scale (no LLM) |
+| `scripts/train_embedder.py` | Full-parameter large-batch contrastive training (GradCache) |
+| `scripts/mine_hard_negatives.py` | Hard-negative mining with the current embedder |
+| `scripts/train_reranker.py` | Cross-encoder reranker training |
+| `scripts/merge_embedding_adapter.py` | Merge a Soup embedding LoRA into a TEI-ready model |
 | `scripts/run_llm_pipeline.py` | One-command LLM pipeline (validate → … → Ollama) |
 | `scripts/caption_images.py` | Splice VLM descriptions of screenshots into extracted Markdown |
 | `scripts/build_pairs.py` | Chunk Markdown → anchor/positive/negative pairs (+ optional SFT rows) |
